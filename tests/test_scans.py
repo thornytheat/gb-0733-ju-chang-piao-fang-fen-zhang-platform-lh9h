@@ -38,7 +38,7 @@ def test_conflicting_scan_id_is_removed(sample):
 def test_scan_id_exact_duplicate_and_scanner_repeat_are_distinct(sample):
     assert sample['reason_counts']['SCAN_ID_DUPLICATE'] == 1
     assert sample['reason_counts']['SCAN_REPEAT'] == 2
-    assert len(sample['scans']) == 7
+    assert len(sample['scans']) == 8
 
 
 def test_scan_api_filters_using_preserved_ticket_id(client):

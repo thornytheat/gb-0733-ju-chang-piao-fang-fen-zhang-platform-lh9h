@@ -15,7 +15,7 @@ def test_concurrent_publication_commits_one_batch(tmp_path, files):
     assert len({reply['manifest']['run_id'] for reply, _ in results}) == 1
     with sqlite3.connect(store.path) as db:
         assert db.execute('SELECT count(*) FROM runs').fetchone() == (1,)
-        assert db.execute('SELECT count(*) FROM run_inputs').fetchone() == (5,)
+        assert db.execute('SELECT count(*) FROM run_inputs').fetchone() == (6,)
 
 
 def test_failure_after_publication_insert_rolls_back_all_tables(tmp_path, files):
@@ -47,7 +47,7 @@ def test_followup_cancellation_reuses_original_and_preserves_batch_history(clien
     revised = new_reply.json()
     assert revised['manifest']['origin_run'] == original['run_id']
     assert revised['manifest']['publication_id'] == original['manifest']['publication_id']
-    assert revised['totals']['refunded_cents'] == 5583
+    assert revised['totals']['refunded_cents'] == 50283
     root = client.get('/').text
     assert revised['run_id'] in root and original['run_id'] not in root
     rerun = upload(old)
@@ -71,6 +71,6 @@ def test_new_revision_can_use_remaining_refund_capacity(client, upload, files):
     assert changed.status_code == 201
     result = changed.json()
     assert result['manifest']['previous_run'] == head
-    assert result['totals']['refunded_cents'] == 7584
+    assert result['totals']['refunded_cents'] == 52284
     items = client.get(f"/api/refunds/{result['run_id']}", params={'q': 'R108-FINAL'}).json()['items']
     assert items[0]['remaining_cents'] == 0

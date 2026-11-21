@@ -2,7 +2,9 @@ from collections import Counter
 
 from app.modules.m6_reconcile.ledger import settlement_rows
 
-MONEY_COLUMNS = ('allocated_cents', 'refunded_cents', 'net_cents', 'payable_cents', 'unsettled_cents')
+MONEY_COLUMNS = ('allocated_cents', 'refunded_cents', 'net_cents', 'payable_cents', 'unsettled_cents',
+                 'fx_difference_cents', 'revalued_net_cents')
+FX_COLUMNS = ('fx_difference_cents', 'revalued_net_cents')
 
 
 def summarize_sides(shows, scans, ledger):
@@ -29,8 +31,10 @@ def summarize_sides(shows, scans, ledger):
 
 def funding_checks(tickets, refunds, ledger, unassigned):
     refunds_by_ticket, payable_by_ticket, pending_by_ticket = Counter(), Counter(), Counter()
+    fx_by_ticket = Counter()
     for entry in refunds:
         refunds_by_ticket[entry['ticket']] += -entry['reversal_cents']
+        fx_by_ticket[entry['ticket']] += entry['fx_difference_cents']
     for row in ledger:
         payable_by_ticket[row['ticket']] += row['payable_cents']
         pending_by_ticket[row['ticket']] += row['unsettled_cents']
@@ -39,8 +43,11 @@ def funding_checks(tickets, refunds, ledger, unassigned):
     entries = []
     for key, ticket in sorted(tickets.items()):
         net = ticket['paid_cents'] - refunds_by_ticket[key]
-        entries.append({'ticket': key, 'sale_line': ticket['line'], 'paid_cents': ticket['paid_cents'],
+        fx = fx_by_ticket[key]
+        entries.append({'ticket': key, 'sale_line': ticket['line'], 'currency': ticket['currency'],
+                        'paid_cents': ticket['paid_cents'], 'paid_minor': ticket['paid_minor'],
                         'refunded_cents': refunds_by_ticket[key], 'net_cents': net,
+                        'fx_difference_cents': fx, 'revalued_net_cents': net - fx,
                         'payable_cents': payable_by_ticket[key], 'unsettled_cents': pending_by_ticket[key],
                         'difference_cents': net - payable_by_ticket[key] - pending_by_ticket[key]})
     return entries
@@ -63,23 +70,33 @@ def reconcile(tickets, shows, scans, refunds, publication, sources):
     by_ticket = funding_checks(tickets, refunds, ledger, unassigned)
     paid = sum(row['paid_cents'] for row in by_ticket)
     refunded = sum(-row['reversal_cents'] for row in refunds)
+    fx_total = sum(row['fx_difference_cents'] for row in refunds)
+    revalued_refunded = sum(-row['revalued_cents'] for row in refunds)
     allocated = sum(row['allocated_cents'] for row in publication['allocations'])
     unallocated = sum(row['unsettled_cents'] for row in unassigned)
     payable = sum(row['payable_cents'] for row in by_venue)
     unsettled = sum(row['unsettled_cents'] for row in by_venue) + unallocated
     difference = paid - refunded - payable - unsettled
+    venue_fx = sum(row['fx_difference_cents'] for row in by_venue)
     checks = {
         'source_rows': all(row['difference'] == 0 for row in sources),
         'original_allocation': paid == allocated + unallocated,
-        'reversal_cap': all(0 <= row['refunded_cents'] <= row['allocated_cents'] for row in ledger)
+        'reversal_cap': all(-1 <= row['allocated_cents'] - row['refunded_cents'] <= row['allocated_cents']
+                            for row in ledger)
                         and sum(row['refunded_cents'] for row in ledger) == refunded,
         'show_balances': all(row['difference_cents'] == 0 for row in by_show),
         'ticket_balances': all(row['difference_cents'] == 0 for row in by_ticket),
         'funding': difference == 0 and sum(row['payable_cents'] for row in by_ticket) == payable,
+        'fx_attributed': venue_fx == fx_total
+                         and all(row['revalued_net_cents'] == row['net_cents'] - row['fx_difference_cents']
+                                 for row in by_ticket)
+                         and revalued_refunded - refunded == fx_total,
     }
     totals = {'paid_cents': paid, 'allocated_cents': allocated, 'unallocated_cents': unallocated,
               'refunded_cents': refunded, 'net_cents': paid - refunded, 'payable_cents': payable,
               'unsettled_cents': unsettled, 'difference_cents': difference,
-              'gap_cents': allocated - payable, 'scan_count': len(scans), 'ticket_count': len(tickets)}
+              'gap_cents': allocated - payable, 'scan_count': len(scans), 'ticket_count': len(tickets),
+              'fx_difference_cents': fx_total, 'revalued_refunded_cents': revalued_refunded,
+              'revalued_net_cents': paid - revalued_refunded}
     return {'balanced': all(checks.values()), 'checks': checks, 'totals': totals, 'ledger': ledger,
             'shows': by_show, 'venues': by_venue, 'tickets': by_ticket, 'sources': sources}

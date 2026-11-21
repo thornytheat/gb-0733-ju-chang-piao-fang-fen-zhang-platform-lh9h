@@ -16,27 +16,27 @@ def test_quoted_multiline_keeps_physical_line_range(sample):
     first = sample['tickets'][0]
     assert (first['line'], first['end_line']) == (2, 3)
     assert first['raw'][-1] == '巡演三联票\n手工核对纸联'
-    assert sample['funding']['sources'][0]['rows'] == 22
+    assert sample['funding']['sources'][0]['rows'] == 24
 
 
 def test_repeated_header_and_empty_line_are_counted(sample):
     """TRAP-04"""
     sources = sample['funding']['sources'][0]
-    assert (sources['headers'], sources['blank'], sources['accepted'], sources['isolated']) == (2, 1, 12, 7)
+    assert (sources['headers'], sources['blank'], sources['accepted'], sources['isolated']) == (1, 1, 14, 8)
 
 
 def test_extra_column_enters_quarantine(sample):
     """TRAP-05"""
     wrong = next(row for row in sample['quarantine'] if row['code'] == 'COLUMN_COUNT')
     assert wrong['raw'][0] == '00992'
-    assert wrong['detail'] == {'expected': 6, 'actual': 7}
+    assert wrong['detail'] == {'expected': 7, 'actual': 8}
 
 
 def test_mixed_money_formats_are_exact(sample):
     """TRAP-06 TRAP-10 TRAP-15"""
     receipts = {item['ticket']: item['paid_cents'] for item in sample['tickets']}
     assert [receipts[code] for code in ('00110', '00111', '00112')] == [123_456, 8_888, 1_500]
-    assert sum(receipts.values()) == 157_746
+    assert sum(receipts.values()) == 247_146
     assert cents('０．０１', '元') == 1
 
 

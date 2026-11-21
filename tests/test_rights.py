@@ -37,7 +37,7 @@ def test_header_only_rights_is_a_real_no_entitlement_batch(files, source_writer)
     snapshot = compute('empty-rights', 'unit', {**files, 'rights.csv': source_writer('rights.csv', [])})
     assert snapshot['funding']['sources'][2]['status'] == 'HEADER_ONLY'
     assert snapshot['rights'] == []
-    assert snapshot['funding']['totals']['unsettled_cents'] == 157_746
+    assert snapshot['funding']['totals']['unsettled_cents'] == 247_146
 
 
 def test_rights_api_can_inspect_cancelled_show_definition(client):

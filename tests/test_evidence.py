@@ -37,6 +37,7 @@ def test_export_keeps_leading_zero_and_negative_cents(client):
         rows = list(csv.DictReader(io.StringIO(archive.read('evidence/refunds.csv').decode('utf-8-sig'))))
         assert [(row['ticket'], row['reversal_cents']) for row in rows] == [
             ('00107', '-1000'), ('00108', '-2000'), ('00116', '-250'), ('00107', '-2333'),
+            ('00201', '-35500'), ('00202', '-9200'),
         ]
 
 
@@ -52,7 +53,7 @@ def test_reason_code_counts_match_export_rows(client):
     with archive:
         content = archive.read('evidence/quarantine.csv').decode('utf-8-sig')
         rows = list(csv.DictReader(io.StringIO(content)))
-        assert len(rows) == 33
+        assert len(rows) == 35
         exceeded = next(row for row in rows if row['key'] == 'R107-02')
         assert exceeded['code'] == 'REFUND_CAP_EXCEEDED'
         assert json.loads(exceeded['detail'])['available_cents'] == 2333

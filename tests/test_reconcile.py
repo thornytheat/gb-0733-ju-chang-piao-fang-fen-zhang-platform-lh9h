@@ -3,10 +3,11 @@ from app.modules.m6_reconcile.service import reconcile
 
 def test_net_receipts_equal_venue_payable_and_pending(sample):
     totals = sample['funding']['totals']
-    assert totals == {'paid_cents': 157746, 'allocated_cents': 154548, 'unallocated_cents': 3198,
-                      'refunded_cents': 5583, 'net_cents': 152163, 'payable_cents': 135546,
-                      'unsettled_cents': 16617, 'difference_cents': 0, 'gap_cents': 19002,
-                      'scan_count': 7, 'ticket_count': 12}
+    assert totals == {'paid_cents': 247146, 'allocated_cents': 243948, 'unallocated_cents': 3198,
+                      'refunded_cents': 50283, 'net_cents': 196863, 'payable_cents': 171046,
+                      'unsettled_cents': 25817, 'difference_cents': 0, 'gap_cents': 72902,
+                      'scan_count': 8, 'ticket_count': 14, 'fx_difference_cents': 150,
+                      'revalued_refunded_cents': 50433, 'revalued_net_cents': 196713}
     assert totals['net_cents'] == totals['payable_cents'] + totals['unsettled_cents']
 
 
@@ -20,11 +21,11 @@ def test_two_shows_are_aggregated_into_same_venue(sample):
     assert (venue['shows'], venue['payable_cents'], venue['allocated_cents'], venue['scan_count']) == (2, 6756, 10256, 3)
 
 
-def test_source_rows_reconcile_across_all_five_files(sample):
+def test_source_rows_reconcile_across_all_six_files(sample):
     sources = sample['funding']['sources']
-    assert sum(row['accepted'] for row in sources) == 43
-    assert sum(row['rows'] for row in sources) == 83
-    assert sum(row['isolated'] for row in sources) == 33
+    assert sum(row['accepted'] for row in sources) == 57
+    assert sum(row['rows'] for row in sources) == 99
+    assert sum(row['isolated'] for row in sources) == 35
     assert sum(row['headers'] + row['blank'] for row in sources) == 7
     assert all(row['difference'] == 0 for row in sources)
 

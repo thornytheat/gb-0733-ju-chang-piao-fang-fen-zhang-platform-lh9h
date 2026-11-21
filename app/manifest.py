@@ -30,7 +30,8 @@ def publication_digest(tickets, shows, rights):
         return [row[field] for field in fields]
 
     material = {
-        'tickets': [project(tickets[key], ('ticket', 'paid_at', 'paid_cents')) for key in sorted(tickets)],
+        'tickets': [project(tickets[key], ('ticket', 'paid_at', 'paid_cents', 'paid_minor', 'currency',
+                                           'locked_rate')) for key in sorted(tickets)],
         'shows': [project(shows[key], ('show', 'title', 'venue', 'publication_status', 'opens', 'closes'))
                   for key in sorted(shows)],
         'rights': [project(row, ('ticket', 'show', 'weight')) for row in rights],

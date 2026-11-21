@@ -12,7 +12,8 @@
 | M4 权重分账 | 按票复核分角尾差和未分配款 | `GET /api/allocation/{run_id}` | `app/modules/m4_allocation/rules.py` `app/modules/m4_allocation/service.py` | `tests/test_allocation.py` |
 | M5 退款冲正 | 逐笔核对停演冲正、限额与超领原因 | `GET /api/refunds/{run_id}` | `app/modules/m5_refunds/rules.py` `app/modules/m5_refunds/service.py` | `tests/test_refunds.py` |
 | M6 场馆勾稽 | 对照双账并按票、场馆、源文件复核 | `GET /api/reconcile/{run_id}` | `app/modules/m6_reconcile/ledger.py` `app/modules/m6_reconcile/service.py` | `tests/test_reconcile.py` |
-| M7 结算凭证 | 查看原因码分布与源清单，下载可重算凭证 | `GET /api/evidence/{run_id}`、`GET /api/evidence/{run_id}/export` | `app/modules/m7_evidence/bundle.py` `app/modules/m7_evidence/csv_out.py` | `tests/test_evidence.py` |
+| M8 汇率差额 | 查锁汇事实、退款重估与逐馆汇差 | `GET /api/fx/{run_id}` | `app/modules/m8_fx/service.py` `app/modules/m5_refunds/service.py` | `tests/test_fx.py` |
+| M7 结算凭证 | 查看原因码分布与源清单，下载可重算凭证、场馆对账单 | `GET /api/evidence/{run_id}`、`GET /api/evidence/{run_id}/export`、`GET /api/reconcile/{run_id}/statement` | `app/modules/m7_evidence/bundle.py` `app/modules/m7_evidence/csv_out.py` | `tests/test_evidence.py` `tests/test_fx.py` |
 
 ## 陷阱登记
 
@@ -34,7 +35,12 @@
 | TRAP-23 | scans.csv 含起点和关闭时刻 | 边界二次入账 | 半开核销窗 | `app/modules/m3_scans/service.py` | `tests/test_scans.py::test_window_start_is_inclusive_and_close_exclusive` |
 | TRAP-24 | tickets.csv 的 00107 拆给相同权重 | 三场取整后少分或多分 | 最大余数与场次键裁决 | `app/modules/m4_allocation/rules.py` | `tests/test_allocation.py::test_equal_remainders_use_stable_show_key_and_conserve` |
 | TRAP-26 | 以 refunds.csv 已发布样例为基准提交仅表头快照 | 原退款被旧表清除 | 校验已过账冲正都保留 | `app/modules/m5_refunds/service.py` | `tests/test_refunds.py::test_previous_approval_cannot_be_erased_by_stale_submission` |
+| TRAP-30 | 美元票收款日与退款日汇率不同 | 已发布应收被后续汇率悄悄改写 | 收款日锁汇，原分账永不重估 | `app/modules/m1_intake/service.py` `app/modules/m8_fx/service.py` | `tests/test_fx.py::test_paid_rate_is_locked_and_published_allocation_never_revalues` |
+| TRAP-31 | 退款晚到且汇率变动 | 汇差混进场馆应收或冲错原分账 | 锁定冲回 + 重估差额独立入汇差槽 | `app/modules/m5_refunds/service.py` | `tests/test_fx.py::test_refund_reverses_locked_cny_but_books_fx_difference_separately` |
+| TRAP-32 | 多笔外币退款逐笔乘汇率四舍五入 | 累计冲回漂移、误触人民币限额 | 按累计外币额重算累计冲回，外币最小单位设硬限额 | `app/modules/m5_refunds/service.py` `app/modules/m5_refunds/rules.py` | `tests/test_fx.py::test_foreign_cap_enforced_in_foreign_minor_unit` |
+| TRAP-33 | 缺收款日或退款日汇率事实 | 静默用空汇率发布 | 整批 `FX_FACT_MISSING`，汇率不全不发布 | `app/pipeline.py` | `tests/test_fx.py::test_missing_refund_date_fx_fact_blocks_publication` |
+| TRAP-34 | 同一张票两个净额无处安放 | 重估额与锁定额互相抵消 | 逐票逐馆双净额，`fx_attributed` 守恒 | `app/modules/m6_reconcile/service.py` | `tests/test_fx.py::test_same_ticket_keeps_two_nets_and_fx_is_fully_attributed` |
 
 ## 对账规则
 
-源逻辑行按采信、隔离、空行、表头解释完毕。实收分等于原分账与未分配票款之和，扣除停演退款后等于场馆应收与未结余额之和。额外覆盖逐票守恒、限额、跨场馆汇总和故障注入。
+源逻辑行按采信、隔离、空行、表头解释完毕。实收分等于原分账与未分配票款之和，扣除停演退款后等于场馆应收与未结余额之和。额外覆盖逐票守恒、限额、跨场馆汇总和故障注入。多币种下人民币主勾稽恒等式保持不变，另以 `fx_attributed` 校验锁定净额、重估净额与逐馆汇差三者守恒，汇差不进应收。

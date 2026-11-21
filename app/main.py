@@ -15,6 +15,7 @@ from app.modules.m4_allocation import handler as allocation
 from app.modules.m5_refunds import handler as refunds
 from app.modules.m6_reconcile import handler as reconcile
 from app.modules.m7_evidence import handler as evidence
+from app.modules.m8_fx import handler as fx
 from app.pipeline import compute
 from app.reasons import REASONS
 from app.sources import sample_sources
@@ -31,7 +32,7 @@ def create_app(db_path=None):
 
     app = FastAPI(title='剧场票房分账台', lifespan=lifespan)
     app.mount('/static', StaticFiles(directory=ROOT / 'app' / 'static'), name='static')
-    for module in (web, runs, intake, rights, scans, allocation, refunds, reconcile, evidence):
+    for module in (web, runs, intake, rights, scans, allocation, refunds, reconcile, evidence, fx):
         app.include_router(module.router)
 
     @app.exception_handler(Problem)

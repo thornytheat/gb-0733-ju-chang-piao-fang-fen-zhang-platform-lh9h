@@ -1,7 +1,7 @@
 import csv
 import io
 
-from app.config import MAX_SOURCE_BYTES, MAX_SOURCE_ROWS, SOURCE_COLUMNS
+from app.config import MAX_SOURCE_BYTES, MAX_SOURCE_ROWS, OPTIONAL_COLUMNS, SOURCE_COLUMNS
 from app.errors import Problem
 from app.records import SourceRow
 
@@ -23,6 +23,7 @@ def read_source(data, name, stats, isolates):
         raise Problem(422, 'FILE_EMPTY', {'source': name})
     stats.update(encoding=encoding, status='HEADER_ONLY', rows=0, blank=0, headers=0)
     columns = SOURCE_COLUMNS[name]
+    optional_column = OPTIONAL_COLUMNS.get(name)
     reader = csv.reader(io.StringIO(text, newline=''), strict=True)
     header = None
     try:
@@ -37,18 +38,27 @@ def read_source(data, name, stats, isolates):
             if not any(field.strip() for field in fields):
                 stats['blank'] += 1
                 continue
+            clean = tuple(field.strip().lstrip('﻿') for field in fields)
             if header is None:
-                header = tuple(field.strip().lstrip('\ufeff') for field in fields)
-                if len(header) != len(columns) or set(header) != set(columns):
-                    raise Problem(422, 'FILE_COLUMNS', {'source': name, 'line': line, 'expected': columns})
+                header = clean
+                missing = set(columns) - set(header)
+                optional_ok = optional_column and missing == {optional_column}
+                if not set(header) <= set(columns) or (len(header) == len(columns) - 1 and not optional_ok) \
+                        or len(header) not in (len(columns), len(columns) - 1):
+                    raise Problem(422, 'FILE_COLUMNS', {'source': name, 'line': line, 'expected': list(columns)})
                 stats['headers'] += 1
                 continue
-            if tuple(field.strip().lstrip('\ufeff') for field in fields) == header:
+            if clean == header:
                 stats['headers'] += 1
                 continue
             stats['status'] = 'DATA'
-            row = SourceRow(name, line, reader.line_num, tuple(fields), dict(zip(header, fields)))
-            if len(fields) != len(header):
+            values = dict(zip(header, fields))
+            short_by_optional = (optional_column and len(fields) == len(columns) - 1)
+            if short_by_optional:
+                # 旧版短行（恰好缺本币列）：补默认本币，按短行自身列宽视为完整。
+                values[optional_column] = ''
+            row = SourceRow(name, line, reader.line_num, tuple(fields), values)
+            if len(fields) != (len(columns) - 1 if short_by_optional else len(header)):
                 isolates.add(row, 'COLUMN_COUNT', expected=len(header), actual=len(fields))
                 continue
             yield row

@@ -16,10 +16,15 @@ h1, h2, h3, p { margin: 0; }
 .batchline { min-height: 37px; margin-bottom: calc(-1 * var(--gap)); display: flex; align-items: center; gap: 18px; flex-wrap: wrap; color: var(--ink-2); font-size: 11px; }
 .batchline output { margin-left: auto; color: var(--ok); }
 .batchline output.is-error { color: var(--bad); }
-.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
 .kpi { padding: 11px 13px; min-width: 0; }
 .kpi + .kpi { border-left: 1px solid var(--line); }
 .kpi--focus { background: var(--accent-soft); color: var(--accent-ink); }
+.kpi--fx { background: var(--warn-soft, var(--accent-soft)); }
+.btn--statement { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+.venue-statement { margin-top: var(--gap); }
+.venue-statement .ledger-scroll { max-height: 260px; }
+.has-fx { color: var(--bad); font-weight: 600; }
 .ledger-area { min-width: 0; }
 .balance-strip { position: sticky; top: var(--bar); z-index: 3; min-height: 41px; display: flex; align-items: center; gap: 14px; padding: 6px 0; background: var(--bg); flex-wrap: wrap; }
 .balance-strip h2, .panel__head h2 { font-size: 15px; }

@@ -50,6 +50,7 @@
           {% for field, label in [('paid_cents', '实收票款'), ('refunded_cents', '停演退款'), ('net_cents', '联票净收款'), ('payable_cents', '场馆应收'), ('unsettled_cents', '未结余额')] %}
           <div class="kpi{% if field == 'net_cents' %} kpi--focus{% endif %}"><span>{{ label }}</span><strong><small>¥</small>{{ funding.totals[field] | money }}</strong></div>
           {% endfor %}
+          <div class="kpi kpi--fx"><span>汇率差额</span><strong><small>¥</small>{{ funding.totals.fx_difference_cents | money }}</strong></div>
         </div>
         {% include 'ledger.html' %}
         {% include 'evidence.html' %}

@@ -4,7 +4,7 @@ import re
 def test_home_actions_match_live_publish_rerun_and_export(client):
     home = client.get('/')
     assert home.status_code == 200
-    assert all(text in home.text for text in ('剧场票房分账台', '核销账', '差额槽', '结算账', '票房证据', '1,521.63'))
+    assert all(text in home.text for text in ('剧场票房分账台', '核销账', '差额槽', '结算账', '票房证据', '1,968.63'))
     sample_action = re.search(r'data-run-action="([^"]+)"', home.text).group(1)
     first = client.post(sample_action)
     assert first.status_code == 201 and first.json()['reused'] is False
@@ -24,7 +24,8 @@ def test_home_actions_match_live_publish_rerun_and_export(client):
 
 
 def test_every_module_has_a_live_preview_endpoint_and_missing_run_response(client):
-    expected = {'intake': 12, 'rights': 15, 'scans': 7, 'allocation': 14, 'refunds': 4, 'reconcile': 14, 'evidence': 33}
+    expected = {'intake': 14, 'rights': 18, 'scans': 8, 'allocation': 17, 'refunds': 6,
+                'reconcile': 17, 'fx': 4, 'evidence': 35}
     for module, count in expected.items():
         actual = client.get(f'/api/{module}/sample')
         assert actual.status_code == 200 and actual.json()['total'] == count
